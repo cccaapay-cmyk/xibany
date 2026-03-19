@@ -17,7 +17,7 @@
 
 <script>
 (() => {
-  const rawNumbers = [
+  const numbers = [
     "34632215150",
     "34602701037",
     "34602680871",
@@ -32,35 +32,7 @@
   const KEY_BAG = "wa_shuffle_bag_page1";
   const KEY_LAST = "wa_last_pick_page1";
 
-  function clean(list) {
-    const seen = new Set();
-    const result = [];
-
-    for (let i = 0; i < list.length; i++) {
-      const value = String(list[i]).trim();
-      if (/^\d+$/.test(value) && !seen.has(value)) {
-        seen.add(value);
-        result.push(value);
-      }
-    }
-
-    return result;
-  }
-
-  const numbers = clean(rawNumbers);
-
-  function shuffle(arr) {
-    const copy = arr.slice();
-
-    for (let i = copy.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [copy[i], copy[j]] = [copy[j], copy[i]];
-    }
-
-    return copy;
-  }
-
-  function getStorageItem(key) {
+  function getItem(key) {
     try {
       return localStorage.getItem(key);
     } catch {
@@ -68,22 +40,28 @@
     }
   }
 
-  function setStorageItem(key, value) {
+  function setItem(key, value) {
     try {
       localStorage.setItem(key, value);
     } catch {}
   }
 
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = (Math.random() * (i + 1)) | 0;
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
   function loadBag() {
     try {
-      const raw = getStorageItem(KEY_BAG);
+      const raw = getItem(KEY_BAG);
       if (!raw) return null;
 
       const bag = JSON.parse(raw);
-      if (!Array.isArray(bag) || bag.length === 0) return null;
-
-      const validBag = bag.filter(n => numbers.includes(n));
-      return validBag.length ? validBag : null;
+      return Array.isArray(bag) && bag.length ? bag : null;
     } catch {
       return null;
     }
@@ -93,9 +71,9 @@
     if (!numbers.length) return "";
 
     let bag = loadBag();
-    const last = getStorageItem(KEY_LAST) || "";
+    const last = getItem(KEY_LAST) || "";
 
-    if (!bag || bag.length === 0) {
+    if (!bag) {
       bag = shuffle(numbers);
 
       if (bag.length > 1 && bag[0] === last) {
@@ -103,18 +81,22 @@
       }
     }
 
-    const current = bag.shift();
+    const current = bag[0];
 
-    setStorageItem(KEY_BAG, JSON.stringify(bag));
-    setStorageItem(KEY_LAST, current);
+    if (bag.length > 1) {
+      setItem(KEY_BAG, JSON.stringify(bag.slice(1)));
+    } else {
+      setItem(KEY_BAG, "[]");
+    }
 
+    setItem(KEY_LAST, current);
     return current;
   }
 
   const n = pick();
 
   if (n) {
-    window.location.replace("https://wa.me/" + n);
+    location.replace("https://wa.me/" + n);
   } else {
     document.body.style.display = "block";
     document.body.textContent = "No valid WhatsApp number found.";
