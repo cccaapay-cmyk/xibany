@@ -27,8 +27,8 @@
     "34623728301"
   ];
 
-  const KEY_BAG = "wa_shuffle_bag_page1";
-  const KEY_LAST = "wa_last_pick_page1";
+  const KEY_BAG = "wa_shuffle_bag_page1_v2";
+  const KEY_LAST = "wa_last_pick_page1_v2";
 
   function getItem(key) {
     try {
@@ -59,7 +59,10 @@
       if (!raw) return null;
 
       const bag = JSON.parse(raw);
-      return Array.isArray(bag) && bag.length ? bag : null;
+      if (!Array.isArray(bag) || !bag.length) return null;
+
+      const validBag = bag.filter(n => numbers.includes(n));
+      return validBag.length ? validBag : null;
     } catch {
       return null;
     }
@@ -73,21 +76,15 @@
 
     if (!bag) {
       bag = shuffle(numbers);
-
       if (bag.length > 1 && bag[0] === last) {
         [bag[0], bag[1]] = [bag[1], bag[0]];
       }
     }
 
     const current = bag[0];
-
-    if (bag.length > 1) {
-      setItem(KEY_BAG, JSON.stringify(bag.slice(1)));
-    } else {
-      setItem(KEY_BAG, "[]");
-    }
-
+    setItem(KEY_BAG, JSON.stringify(bag.slice(1)));
     setItem(KEY_LAST, current);
+
     return current;
   }
 
