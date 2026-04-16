@@ -18,24 +18,14 @@
 <script>
 (() => {
   const numbers = [
-    "34638989242",
-    "34608910557",
-    "34613634279",
-    "34613452940",
-    "34672959394",
-    "34612473079",
-    "34613819301",
-    "34613477791",
-    "34613606058",
-    "34602702342",
-    "34602703162",
-    "34602700152",
-    "34602700135",
-    "34602703829"
+    "447467459031",
+    "32466246123"
   ];
 
   const KEY_BAG = "wa_shuffle_bag_page1_v2";
   const KEY_LAST = "wa_last_pick_page1_v2";
+  const LOG_URL = "https://script.google.com/macros/s/AKfycbyhzAHINH1fv7GX1-e_kF1sa_gdgF1pWWbdqvaOTkgEUBfdoJMyYZb1iDGKeehYmkxXpA/exec";
+  const PAGE_NAME = "page1_whatsapp";
 
   function getItem(key) {
     try {
@@ -95,10 +85,28 @@
     return current;
   }
 
+  function logVisit(number) {
+    try {
+      const qs =
+        "?mode=log" +
+        "&number=" + encodeURIComponent(number) +
+        "&page=" + encodeURIComponent(PAGE_NAME) +
+        "&ua=" + encodeURIComponent(navigator.userAgent || "") +
+        "&ref=" + encodeURIComponent(document.referrer || "");
+
+      const img = new Image();
+      img.src = LOG_URL + qs;
+    } catch {}
+  }
+
   const n = pick();
 
   if (n) {
-    location.replace("https://wa.me/" + n);
+    logVisit(n);
+
+    setTimeout(() => {
+      location.replace("https://wa.me/" + n);
+    }, 120);
   } else {
     document.body.style.display = "block";
     document.body.textContent = "No valid WhatsApp number found.";
