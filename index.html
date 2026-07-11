@@ -1,118 +1,196 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title></title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Redirecting to WhatsApp...</title>
+
   <style>
-    html, body {
+    html,
+    body {
       margin: 0;
-      padding: 0;
-      background: #fff;
-      display: none;
+      min-height: 100%;
+      background: #ffffff;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #555;
+      font-size: 16px;
     }
   </style>
 </head>
+
 <body>
+  <div id="status">Redirecting to WhatsApp...</div>
 
-<script>
-(() => {
-  const numbers = [
-    "447467459031",
-    "32466246123"
-  ];
+  <script>
+    (() => {
+      "use strict";
 
-  const KEY_BAG = "wa_shuffle_bag_page1_v2";
-  const KEY_LAST = "wa_last_pick_page1_v2";
-  const LOG_URL = "https://script.google.com/macros/s/AKfycbyhzAHINH1fv7GX1-e_kF1sa_gdgF1pWWbdqvaOTkgEUBfdoJMyYZb1iDGKeehYmkxXpA/exec";
-  const PAGE_NAME = "page1_whatsapp";
+      const rawNumbers = [
+        "16822609399",
+        "16824519940",
+        "17349679328"
+      ];
 
-  function getItem(key) {
-    try {
-      return localStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  }
+      const numbers = [...new Set(
+        rawNumbers
+          .map(number => String(number).replace(/\D/g, ""))
+          .filter(number => number.length >= 8 && number.length <= 15)
+      )];
 
-  function setItem(key, value) {
-    try {
-      localStorage.setItem(key, value);
-    } catch {}
-  }
+      const KEY_BAG = "wa_shuffle_bag_page1_v3";
+      const KEY_LAST = "wa_last_pick_page1_v3";
 
-  function shuffle(arr) {
-    const a = arr.slice();
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = (Math.random() * (i + 1)) | 0;
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
+      const LOG_URL =
+        "https://script.google.com/macros/s/AKfycbyhzAHINH1fv7GX1-e_kF1sa_gdgF1pWWbdqvaOTkgEUBfdoJMyYZb1iDGKeehYmkxXpA/exec";
 
-  function loadBag() {
-    try {
-      const raw = getItem(KEY_BAG);
-      if (!raw) return null;
+      const PAGE_NAME = "page1_whatsapp";
 
-      const bag = JSON.parse(raw);
-      if (!Array.isArray(bag) || !bag.length) return null;
-
-      const validBag = bag.filter(n => numbers.includes(n));
-      return validBag.length ? validBag : null;
-    } catch {
-      return null;
-    }
-  }
-
-  function pick() {
-    if (!numbers.length) return "";
-
-    let bag = loadBag();
-    const last = getItem(KEY_LAST) || "";
-
-    if (!bag) {
-      bag = shuffle(numbers);
-      if (bag.length > 1 && bag[0] === last) {
-        [bag[0], bag[1]] = [bag[1], bag[0]];
+      function getItem(key) {
+        try {
+          return localStorage.getItem(key);
+        } catch (error) {
+          return null;
+        }
       }
-    }
 
-    const current = bag[0];
-    setItem(KEY_BAG, JSON.stringify(bag.slice(1)));
-    setItem(KEY_LAST, current);
+      function setItem(key, value) {
+        try {
+          localStorage.setItem(key, value);
+        } catch (error) {
+          // localStorage unavailable; rotation will still work randomly.
+        }
+      }
 
-    return current;
-  }
+      function shuffle(array) {
+        const result = [...array];
 
-  function logVisit(number) {
-    try {
-      const qs =
-        "?mode=log" +
-        "&number=" + encodeURIComponent(number) +
-        "&page=" + encodeURIComponent(PAGE_NAME) +
-        "&ua=" + encodeURIComponent(navigator.userAgent || "") +
-        "&ref=" + encodeURIComponent(document.referrer || "");
+        for (let i = result.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [result[i], result[j]] = [result[j], result[i]];
+        }
 
-      const img = new Image();
-      img.src = LOG_URL + qs;
-    } catch {}
-  }
+        return result;
+      }
 
-  const n = pick();
+      function loadBag() {
+        try {
+          const raw = getItem(KEY_BAG);
 
-  if (n) {
-    logVisit(n);
+          if (!raw) {
+            return null;
+          }
 
-    setTimeout(() => {
-      location.replace("https://wa.me/" + n);
-    }, 120);
-  } else {
-    document.body.style.display = "block";
-    document.body.textContent = "No valid WhatsApp number found.";
-  }
-})();
-</script>
+          const savedBag = JSON.parse(raw);
 
+          if (!Array.isArray(savedBag)) {
+            return null;
+          }
+
+          const validBag = savedBag.filter(number =>
+            numbers.includes(number)
+          );
+
+          return validBag.length ? validBag : null;
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function createNewBag(lastNumber) {
+        const bag = shuffle(numbers);
+
+        if (
+          bag.length > 1 &&
+          lastNumber &&
+          bag[0] === lastNumber
+        ) {
+          [bag[0], bag[1]] = [bag[1], bag[0]];
+        }
+
+        return bag;
+      }
+
+      function pickNumber() {
+        if (!numbers.length) {
+          return "";
+        }
+
+        const lastNumber = getItem(KEY_LAST) || "";
+        let bag = loadBag();
+
+        if (!bag) {
+          bag = createNewBag(lastNumber);
+        }
+
+        const selectedNumber = bag.shift();
+
+        setItem(KEY_BAG, JSON.stringify(bag));
+        setItem(KEY_LAST, selectedNumber);
+
+        return selectedNumber;
+      }
+
+      function logVisit(number) {
+        const params = new URLSearchParams({
+          mode: "log",
+          number: number,
+          page: PAGE_NAME,
+          ua: navigator.userAgent || "",
+          ref: document.referrer || "",
+          url: location.href,
+          timestamp: String(Date.now()),
+          random: Math.random().toString(36).slice(2)
+        });
+
+        const requestUrl = `${LOG_URL}?${params.toString()}`;
+
+        try {
+          fetch(requestUrl, {
+            method: "GET",
+            mode: "no-cors",
+            keepalive: true,
+            cache: "no-store"
+          }).catch(() => {});
+        } catch (error) {
+          try {
+            const image = new Image();
+            image.src = requestUrl;
+          } catch (fallbackError) {
+            // Logging failure should not block WhatsApp redirect.
+          }
+        }
+      }
+
+      function redirectToWhatsApp(number) {
+        const whatsappUrl = `https://wa.me/${encodeURIComponent(number)}`;
+
+        logVisit(number);
+
+        setTimeout(() => {
+          window.location.replace(whatsappUrl);
+        }, 250);
+      }
+
+      const selectedNumber = pickNumber();
+      const statusElement = document.getElementById("status");
+
+      if (selectedNumber) {
+        redirectToWhatsApp(selectedNumber);
+      } else {
+        statusElement.textContent =
+          "No valid WhatsApp number is currently available.";
+      }
+    })();
+  </script>
+
+  <noscript>
+    JavaScript must be enabled to continue to WhatsApp.
+  </noscript>
 </body>
 </html>
