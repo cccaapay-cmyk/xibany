@@ -3,194 +3,160 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Redirecting to WhatsApp...</title>
+  <title></title>
 
   <style>
     html,
     body {
       margin: 0;
-      min-height: 100%;
+      padding: 0;
       background: #ffffff;
-      font-family: Arial, sans-serif;
-    }
-
-    body {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #555;
-      font-size: 16px;
+      display: none;
     }
   </style>
 </head>
 
 <body>
-  <div id="status">Redirecting to WhatsApp...</div>
 
-  <script>
-    (() => {
-      "use strict";
+<script>
+(() => {
+  "use strict";
 
-      const rawNumbers = [
-        "16822609399",
-        "16824519940",
-        "17349679328"
-      ];
+  const rawNumbers = [
+    "16822609399",
+    "16824519940",
+    "17349679328"
+  ];
 
-      const numbers = [...new Set(
-        rawNumbers
-          .map(number => String(number).replace(/\D/g, ""))
-          .filter(number => number.length >= 8 && number.length <= 15)
-      )];
+  const numbers = [...new Set(
+    rawNumbers
+      .map(number => String(number).replace(/\D/g, ""))
+      .filter(number => number.length >= 8 && number.length <= 15)
+  )];
 
-      const KEY_BAG = "wa_shuffle_bag_page1_v3";
-      const KEY_LAST = "wa_last_pick_page1_v3";
+  const KEY_BAG = "wa_shuffle_bag_page1_v3";
+  const KEY_LAST = "wa_last_pick_page1_v3";
 
-      const LOG_URL =
-        "https://script.google.com/macros/s/AKfycbyhzAHINH1fv7GX1-e_kF1sa_gdgF1pWWbdqvaOTkgEUBfdoJMyYZb1iDGKeehYmkxXpA/exec";
+  const LOG_URL =
+    "https://script.google.com/macros/s/AKfycbyhzAHINH1fv7GX1-e_kF1sa_gdgF1pWWbdqvaOTkgEUBfdoJMyYZb1iDGKeehYmkxXpA/exec";
 
-      const PAGE_NAME = "page1_whatsapp";
+  const PAGE_NAME = "page1_whatsapp";
 
-      function getItem(key) {
-        try {
-          return localStorage.getItem(key);
-        } catch (error) {
-          return null;
-        }
+  function getItem(key) {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  }
+
+  function setItem(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch {}
+  }
+
+  function shuffle(array) {
+    const result = array.slice();
+
+    for (let i = result.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [result[i], result[j]] = [result[j], result[i]];
+    }
+
+    return result;
+  }
+
+  function loadBag() {
+    try {
+      const raw = getItem(KEY_BAG);
+
+      if (!raw) {
+        return null;
       }
 
-      function setItem(key, value) {
-        try {
-          localStorage.setItem(key, value);
-        } catch (error) {
-          // localStorage unavailable; rotation will still work randomly.
-        }
+      const savedBag = JSON.parse(raw);
+
+      if (!Array.isArray(savedBag)) {
+        return null;
       }
 
-      function shuffle(array) {
-        const result = [...array];
+      const validBag = savedBag.filter(number =>
+        numbers.includes(number)
+      );
 
-        for (let i = result.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [result[i], result[j]] = [result[j], result[i]];
-        }
+      return validBag.length ? validBag : null;
+    } catch {
+      return null;
+    }
+  }
 
-        return result;
+  function pickNumber() {
+    if (!numbers.length) {
+      return "";
+    }
+
+    const lastNumber = getItem(KEY_LAST) || "";
+    let bag = loadBag();
+
+    if (!bag) {
+      bag = shuffle(numbers);
+
+      if (
+        bag.length > 1 &&
+        lastNumber &&
+        bag[0] === lastNumber
+      ) {
+        [bag[0], bag[1]] = [bag[1], bag[0]];
       }
+    }
 
-      function loadBag() {
-        try {
-          const raw = getItem(KEY_BAG);
+    const selectedNumber = bag.shift();
 
-          if (!raw) {
-            return null;
-          }
+    setItem(KEY_BAG, JSON.stringify(bag));
+    setItem(KEY_LAST, selectedNumber);
 
-          const savedBag = JSON.parse(raw);
+    return selectedNumber;
+  }
 
-          if (!Array.isArray(savedBag)) {
-            return null;
-          }
+  function logVisit(number) {
+    try {
+      const params = new URLSearchParams({
+        mode: "log",
+        number: number,
+        page: PAGE_NAME,
+        ua: navigator.userAgent || "",
+        ref: document.referrer || "",
+        url: location.href,
+        timestamp: String(Date.now()),
+        random: Math.random().toString(36).slice(2)
+      });
 
-          const validBag = savedBag.filter(number =>
-            numbers.includes(number)
-          );
+      fetch(`${LOG_URL}?${params.toString()}`, {
+        method: "GET",
+        mode: "no-cors",
+        keepalive: true,
+        cache: "no-store"
+      }).catch(() => {});
+    } catch {}
+  }
 
-          return validBag.length ? validBag : null;
-        } catch (error) {
-          return null;
-        }
-      }
+  const selectedNumber = pickNumber();
 
-      function createNewBag(lastNumber) {
-        const bag = shuffle(numbers);
+  if (selectedNumber) {
+    logVisit(selectedNumber);
 
-        if (
-          bag.length > 1 &&
-          lastNumber &&
-          bag[0] === lastNumber
-        ) {
-          [bag[0], bag[1]] = [bag[1], bag[0]];
-        }
+    // 立即跳转，不再等待250毫秒
+    window.location.replace(
+      "https://wa.me/" + encodeURIComponent(selectedNumber)
+    );
+  } else {
+    document.body.style.display = "block";
+    document.body.textContent =
+      "No valid WhatsApp number found.";
+  }
+})();
+</script>
 
-        return bag;
-      }
-
-      function pickNumber() {
-        if (!numbers.length) {
-          return "";
-        }
-
-        const lastNumber = getItem(KEY_LAST) || "";
-        let bag = loadBag();
-
-        if (!bag) {
-          bag = createNewBag(lastNumber);
-        }
-
-        const selectedNumber = bag.shift();
-
-        setItem(KEY_BAG, JSON.stringify(bag));
-        setItem(KEY_LAST, selectedNumber);
-
-        return selectedNumber;
-      }
-
-      function logVisit(number) {
-        const params = new URLSearchParams({
-          mode: "log",
-          number: number,
-          page: PAGE_NAME,
-          ua: navigator.userAgent || "",
-          ref: document.referrer || "",
-          url: location.href,
-          timestamp: String(Date.now()),
-          random: Math.random().toString(36).slice(2)
-        });
-
-        const requestUrl = `${LOG_URL}?${params.toString()}`;
-
-        try {
-          fetch(requestUrl, {
-            method: "GET",
-            mode: "no-cors",
-            keepalive: true,
-            cache: "no-store"
-          }).catch(() => {});
-        } catch (error) {
-          try {
-            const image = new Image();
-            image.src = requestUrl;
-          } catch (fallbackError) {
-            // Logging failure should not block WhatsApp redirect.
-          }
-        }
-      }
-
-      function redirectToWhatsApp(number) {
-        const whatsappUrl = `https://wa.me/${encodeURIComponent(number)}`;
-
-        logVisit(number);
-
-        setTimeout(() => {
-          window.location.replace(whatsappUrl);
-        }, 250);
-      }
-
-      const selectedNumber = pickNumber();
-      const statusElement = document.getElementById("status");
-
-      if (selectedNumber) {
-        redirectToWhatsApp(selectedNumber);
-      } else {
-        statusElement.textContent =
-          "No valid WhatsApp number is currently available.";
-      }
-    })();
-  </script>
-
-  <noscript>
-    JavaScript must be enabled to continue to WhatsApp.
-  </noscript>
 </body>
 </html>
