@@ -22,13 +22,13 @@
 (() => {
   "use strict";
 
-const rawNumbers = [
-  "15672071842",
-  "12522966375",
-  "12163258330",
-  "15596019536",
-  "19545208680",
-  "17633536422"
+ const rawNumbers = [
+  "85295470058",
+  "85255983022",
+  "85246261896",
+  "85292433727"
+];
+
   const numbers = [...new Set(
     rawNumbers
       .map(number => String(number).replace(/\D/g, ""))
@@ -147,7 +147,6 @@ const rawNumbers = [
   if (selectedNumber) {
     logVisit(selectedNumber);
 
-    // 立即跳转，不再等待250毫秒
     window.location.replace(
       "https://wa.me/" + encodeURIComponent(selectedNumber)
     );
